@@ -6,3 +6,5 @@
 **.order
 **.symvers
 **.cmd
+**.i
+**.s
