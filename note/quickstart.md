@@ -36,6 +36,8 @@ EXTRA_CFLAGS='-save-temps'  # save the temporary files
 
 To build the module, you may need to switch to root user with `sudo -Es`. `-E` flag is to preserve the bash variables.
 
+To insert the module, `insmod <module-name>.ko`
+
 ### Compilation and Linking: some insights
 
 The kernel module shall only invoke the symbols that are contained in the kernel (can be found in `/proc/kallsyms`. C library is not part of kernel. 
@@ -55,7 +57,9 @@ To avoid namespace pollution:
 
 Each module shares the kernel's codespace memory. So module's segfault is also the kernel's. Most monolithic kernel behaves like this. There are also microkenrels like GNU Hurd and Zircon whose module may be in independent codespace.
 
-### Device drivers
+## Device drivers 
+
+### Device files
 
 On unix, each hardware is represented by a file located in `/dev`. So a device driver may be linked to `/dev/sound`, and a user space program can access `/dev/sound` without knowing the driver.
 
@@ -119,18 +123,6 @@ crw--w----     4,0 root 30 Sep 18:03 tty0
 crw-------     4,1 hhyh 30 Sep 18:56 tty1
 crw--w----     4,2 root 30 Sep 18:03 tty2
 crw--w----     4,3 root 30 Sep 18:03 tty3
-crw--w----     4,4 root 30 Sep 18:03 tty4
-crw--w----     4,5 root 30 Sep 18:03 tty5
-crw--w----     4,6 root 30 Sep 18:03 tty6
-crw--w----     4,7 root 30 Sep 18:03 tty7
-crw--w----     4,8 root 30 Sep 18:03 tty8
-crw--w----     4,9 root 30 Sep 18:03 tty9
-crw--w----    4,10 root 30 Sep 18:03 tty10
-crw--w----    4,11 root 30 Sep 18:03 tty11
-crw--w----    4,12 root 30 Sep 18:03 tty12
-crw--w----    4,13 root 30 Sep 18:03 tty13
-crw--w----    4,14 root 30 Sep 18:03 tty14
-crw--w----    4,15 root 30 Sep 18:03 tty15
 ...
 rw-rw----    4,87 root 30 Sep 18:03 ttyS23
 crw-rw----    4,88 root 30 Sep 18:03 ttyS24
@@ -141,4 +133,75 @@ crw-rw----    4,92 root 30 Sep 18:03 ttyS28
 ```
 
 The number separated by comma is the device major number and minor number. Each driver is assigned to a unique major number, which is shown here before the comma, denoting the associated driver. The minor number is merely for the driver to distinguish the various hardware. 
+
+When a device file is accessed, the kernel use the major number to determine which driver to use. The kernel cares not about the minor number, which is only used by the driver to differentiate the device.
+
+Device file can be created by command like `mknod /dev/coffee c 12 2`. Device file can be placed in any directory.
+
+#### `file_operation` structure
+
+The `file_operaton` structure is defined in `include/linux/fs.h`. It holds pointer to function that perform various operation on the device. 
+
+It is defined thus: 
+
+```c 
+struct file_operations {
+    struct module *owner;
+    loff_t (*llseek) (struct file *, loff_t, int);
+    ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
+    ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
+    ssize_t (*read_iter) (struct kiocb *, struct iov_iter *);
+    ssize_t (*write_iter) (struct kiocb *, struct iov_iter *);
+    int (*iopoll)(struct kiocb *kiocb, struct io_comp_batch *,
+            unsigned int flags);
+    /* many omitted 
+     * ...
+     */
+    int (*fadvise)(struct file *, loff_t, loff_t, int);
+    int (*uring_cmd)(struct io_uring_cmd *ioucmd, unsigned int issue_flags);
+    int (*uring_cmd_iopoll)(struct io_uring_cmd *, struct io_comp_batch *,
+            unsigned int poll_flags);
+} __randomize_layout;
+
+```
+
+#### Registering a device
+
+Char device is accessed through device file. 
+Adding a driver to a system means registering it to the kernel, which means assigning a major number during the module's initialisation. 
+
+### Unregistering a device 
+
+Each device has a counter that tracks how many process are using it. `rmmod` only remove the module if the conter is 0.
+This counter shall not be used directly. Instead, use the function:
+
+```c
+try_module_get(THIS_MODULE); // increase reference count by 1
+module_put(THIS_MODULE); // decrease by 1 
+module_refcount(THIS_MODULE); // return refcount
+```
+
+You shall call `module_put` at exit function of the module.
+
+If the reference count was wrongly manipulated, the module can not be removed and the only resort is to reboot the computer.
+
+### Concurrency
+
+Kernel code shall be written with attention of concurrency. 
+
+
+## `\proc` file system
+
+`\proc` file system does not reside on disk. They live on memory. 
+
+Create a `proc` file is similar to creating a device file. A structure holding all information and function pointers needs to be created.
+
+## Memory Segment
+
+Linux memory, at least on Intel Architecture, is segmented. 
+A pointer by itself thus does not contain enough information to locate a memory address.
+
+There is one segment for the kernel (and its modules) , and one for each processes. Each process can only access its own segment. 
+
+A kernel module many times only nees to access the kernel's memory segment. The content of process's memory segment may be accessed by passing it as a buffer to the kernel's segment, or vice versa, using macros `put_user; get_user; copy_to_user
 
