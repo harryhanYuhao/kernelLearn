@@ -18,4 +18,41 @@ static struct proc_dir_entry *our_proc_file;
 static char procfs_buffer[PROCFS_MAX_SIZE];
 
 /*the size of the buffer */
+static unsigned long procfs_buffer_size = 0;
 
+/* this session is called when proc is read */
+static ssize_t procfile_read(struct file *file_pointer, char __user *buffer
+                             size_t buffer_length, loff_t *offset)
+{
+        char s[15] = "Hello, World!\n";
+        int len = sizeof(s);
+        ssize_t ret = len;
+
+        if (*offset >= len || copy_to_user(buffer, s, len)) {
+                pr_info("Copy to User failed!\n");
+                ret = 0;
+        } else {
+                pr_info("procfile read %s\n",
+                        file_pointer->f_path.dentry->d_name.name);
+                *offset += len;
+        }
+        return ret;
+}
+
+/* This function is called when /proc file is written */
+static ssize_t procfile_write(struct file *file, const char __user *buff,
+                              size_t len, loff_t *off)
+{
+        procfs_buffer_size = len;
+        if (procfs_buffer_size > PROCFS_MAX_SIZE)
+                procfs_buffer_size = PROCFS_MAX_SIZE;
+
+        if (copy_from_user(procfs_buffer, buff, procfs_buffer_size))
+                return -EFAULT;
+
+        procfs_buffer[procfs_buffer_size & (PROCFS_MAX_SIZE - 1)] ='\0';
+        *off += procfs_buffer_size;
+        pr_info("procfile write %s \n", procfs_buffer);
+
+        return procfs_buffer_size;
+}
