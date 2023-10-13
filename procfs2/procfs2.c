@@ -21,7 +21,7 @@ static char procfs_buffer[PROCFS_MAX_SIZE];
 static unsigned long procfs_buffer_size = 0;
 
 /* this session is called when proc is read */
-static ssize_t procfile_read(struct file *file_pointer, char __user *buffer
+static ssize_t procfile_read(struct file *file_pointer, char __user *buffer,
                              size_t buffer_length, loff_t *offset)
 {
         char s[15] = "Hello, World!\n";
@@ -56,3 +56,37 @@ static ssize_t procfile_write(struct file *file, const char __user *buff,
 
         return procfs_buffer_size;
 }
+
+#ifdef HAVE_PROC_OPS
+static const struct proc_ops proc_file_fops = {
+        .proc_read = procfile_read,
+        .proc_write = procfile_write,
+};
+#else 
+static const struct file_operations proc_file_fops = {
+        .read = procfile_read,
+        .write = procfile_write,
+};
+#endif
+
+static int __init procfs2_init(void)
+{
+        our_proc_file = proc_create(PROCFS_NAME, 0644, NULL, &proc_file_fops);
+        if (our_proc_file == NULL){
+                pr_alert("Error: Could not generate /proc/%s \n", PROCFS_NAME);
+                return -ENOMEM;
+        }
+
+        pr_info("/proc/%s created!", PROCFS_NAME);
+        return 0;
+}
+
+static void __exit procfs2_exit(void) {
+        proc_remove(our_proc_file);
+        pr_info("/proc/%s removed!", PROCFS_NAME);
+}
+
+module_init(procfs2_init);
+module_exit(procfs2_exit);
+
+MODULE_LICENSE("GPL");
