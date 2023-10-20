@@ -1,4 +1,4 @@
-obj-m += pci.o
+obj-m += mypci.o
 
 PWD := $(CURDIR)
 

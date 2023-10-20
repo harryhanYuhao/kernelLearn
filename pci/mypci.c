@@ -8,8 +8,8 @@
 #define PCITTL32IO_OFFSET_IRQ  0xF9
 
 /* can be checked with lspci -nn */
-#define PCITTL32IO_VENDOR_ID 0x8008
-#define PCITTL32IO_DEVICE_ID 0x3301
+#define PCITTL32IO_VENDOR_ID 0x8086
+#define PCITTL32IO_DEVICE_ID 0x9d18
 
 /* Meta Information */
 MODULE_LICENSE("GPL");
@@ -48,7 +48,7 @@ static void pcittl32io_remove(struct pci_dev *dev) {
 
 /* PCI driver struct */
 static struct pci_driver pcittl32io_driver = {
-	.name = "pcittl32io",
+	.name = "intel_pci",
 	.id_table = pcittl32io_ids,
 	/* probe function is called when pci_register_driver is called */
 	.probe = pcittl32io_probe,
