@@ -1,4 +1,4 @@
-obj-m += mypci.o
+obj-m += findpci.o
 
 PWD := $(CURDIR)
 
