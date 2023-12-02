@@ -20,6 +20,7 @@ static ssize_t procfile_read(struct file *file_operator, char __user *buffer,
 	int len = sizeof(s);
 	ssize_t ret = len;
 	
+	file_operator 
 	if (*offset >= len || copy_to_user(buffer, s, len)) {
 		pr_info("copy_to_user failed!\n");
 		ret = 0;

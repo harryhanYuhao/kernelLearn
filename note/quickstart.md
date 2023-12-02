@@ -36,7 +36,9 @@ EXTRA_CFLAGS='-save-temps'  # save the temporary files
 
 To build the module, you may need to switch to root user with `sudo -Es`. `-E` flag is to preserve the bash variables.
 
-To insert the module, `insmod <module-name>.ko`
+To insert the module, `insmod <module-name>.ko` To remove module: `rmmod <module-name>`. 
+
+To show module in action, it is customarily to use printk. (or `pr_info`, `pr_alert`). The contents will not be shown in stdout, but in systemlog. Check syslog with `journalctl --since "5 minute ago"` or `dmesg -WT` to moniter the kernel ring buffer.
 
 ### Compilation and Linking: some insights
 
