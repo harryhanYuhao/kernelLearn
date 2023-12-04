@@ -86,6 +86,7 @@ static void __exit procfs2_exit(void) {
         pr_info("/proc/%s removed!", PROCFS_NAME);
 }
 
+
 module_init(procfs2_init);
 module_exit(procfs2_exit);
 
